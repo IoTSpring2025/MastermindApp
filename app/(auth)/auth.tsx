@@ -16,6 +16,7 @@ import { useAuth } from '@/app/lib/authContext';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { LoadingScreen } from '@/components/LoadingScreen';
+import { authStyle } from '@/app/styles/authStyle';
 
 function AuthScreen() {
   const { createAccount, signInWithEmail, loading } = useAuth();
@@ -26,7 +27,6 @@ function AuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   
-  // Show loading indicator while auth is initializing
   if (loading) {
     return <LoadingScreen />;
   }
@@ -52,10 +52,8 @@ function AuthScreen() {
     setIsCreatingAccount(true);
     try {
       await createAccount(email, password);
-      // Success is handled by the auth state observer
     } catch (error) {
-      // Error is handled in the createAccount function
-      console.error('Account creation error:', error);
+      Alert.alert('Unable to create account');
     } finally {
       setIsCreatingAccount(false);
     }
@@ -70,33 +68,31 @@ function AuthScreen() {
     setIsSigningIn(true);
     try {
       await signInWithEmail(email, password);
-      // Success is handled by the auth state observer
     } catch (error) {
-      // Error is handled in the signInWithEmail function
-      console.error('Sign in error:', error);
+      Alert.alert('Unable to sign in');
     } finally {
       setIsSigningIn(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={authStyle.safeArea}>
       <KeyboardAvoidingView 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
+        style={authStyle.keyboardView}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <ThemedView style={styles.container}>
-            <ThemedView style={styles.headerContainer}>
+        <ScrollView contentContainerStyle={authStyle.scrollContent}>
+          <ThemedView style={authStyle.container}>
+            <ThemedView style={authStyle.headerContainer}>
               <ThemedText type="title">Welcome to Mastermind</ThemedText>
-              <ThemedText style={styles.subtitle}>
+              <ThemedText style={authStyle.subtitle}>
                 {isSignUp ? 'Create an account' : 'Sign in to continue'}
               </ThemedText>
             </ThemedView>
             
-            <ThemedView style={styles.formContainer}>
+            <ThemedView style={authStyle.formContainer}>
               <TextInput
-                style={styles.input}
+                style={authStyle.input}
                 placeholder="Email"
                 placeholderTextColor="#999"
                 keyboardType="email-address"
@@ -106,7 +102,7 @@ function AuthScreen() {
               />
               
               <TextInput
-                style={styles.input}
+                style={authStyle.input}
                 placeholder="Password"
                 placeholderTextColor="#999"
                 secureTextEntry
@@ -116,7 +112,7 @@ function AuthScreen() {
               
               {isSignUp && (
                 <TextInput
-                  style={styles.input}
+                  style={authStyle.input}
                   placeholder="Confirm Password"
                   placeholderTextColor="#999"
                   secureTextEntry
@@ -127,39 +123,39 @@ function AuthScreen() {
               
               {isSignUp ? (
                 <TouchableOpacity 
-                  style={styles.button}
+                  style={authStyle.button}
                   onPress={handleCreateAccount}
                   disabled={isCreatingAccount}
                 >
                   {isCreatingAccount ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.buttonText}>Create Account</Text>
+                    <Text style={authStyle.buttonText}>Create Account</Text>
                   )}
                 </TouchableOpacity>
               ) : (
                 <TouchableOpacity 
-                  style={styles.button}
+                  style={authStyle.button}
                   onPress={handleSignIn}
                   disabled={isSigningIn}
                 >
                   {isSigningIn ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.buttonText}>Sign In</Text>
+                    <Text style={authStyle.buttonText}>Sign In</Text>
                   )}
                 </TouchableOpacity>
               )}
               
               <TouchableOpacity 
-                style={styles.toggleButton}
+                style={authStyle.toggleButton}
                 onPress={() => {
                   setIsSignUp(!isSignUp);
                   setPassword('');
                   setConfirmPassword('');
                 }}
               >
-                <Text style={styles.toggleText}>
+                <Text style={authStyle.toggleText}>
                   {isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up'}
                 </Text>
               </TouchableOpacity>
@@ -170,67 +166,5 @@ function AuthScreen() {
     </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
-  },
-  container: {
-    flex: 1,
-    padding: 20,
-    justifyContent: 'center',
-  },
-  headerContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  subtitle: {
-    marginTop: 10,
-    opacity: 0.7,
-  },
-  formContainer: {
-    gap: 16,
-  },
-  input: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 16,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
-    backgroundColor: '#1E88E5',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  toggleButton: {
-    alignItems: 'center',
-    padding: 12,
-  },
-  toggleText: {
-    color: '#1E88E5',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-});
 
 export default AuthScreen; 

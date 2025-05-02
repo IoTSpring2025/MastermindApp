@@ -21,7 +21,7 @@ function ProfileScreen() {
     } catch (error) {
       console.error('Sign out error:', error);
     }
-  };
+  }
 
   return (
     <ThemedView style={profileStyle.container}>

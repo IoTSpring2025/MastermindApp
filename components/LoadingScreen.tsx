@@ -1,25 +1,14 @@
 import React from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
+import { loadingStyle } from '@/app/styles/loadingStyle';
 
 export function LoadingScreen() {
   return (
-    <ThemedView style={styles.container}>
+    <ThemedView style={loadingStyle.container}>
       <ActivityIndicator size="large" color="#4285F4" />
-      <ThemedText style={styles.text}>Loading...</ThemedText>
+      <ThemedText style={loadingStyle.text}>Loading...</ThemedText>
     </ThemedView>
   );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    marginTop: 20,
-    fontSize: 16,
-  },
-}); 
+} 

@@ -54,8 +54,9 @@ export default {
     firebaseMeasurementId: process.env.FIREBASE_MEASUREMENT_ID,
     googleIosClientId: process.env.GOOGLE_IOS_CLIENT_ID,
     googleWebClientId: process.env.GOOGLE_WEB_CLIENT_ID,
+    openaiApiKey: process.env.OPENAI_API_KEY,
     eas: {
       projectId: "your-project-id"
     }
   }
-}; 
+};

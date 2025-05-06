@@ -80,6 +80,7 @@ export default function HistoryScreen() {
       const q = query(
         gamesRef,
         where('player_id', '==', user.email),
+        where('completed', '==', true),
         orderBy('createdAt', 'desc')
       );
       const querySnapshot = await getDocs(q);
@@ -122,6 +123,18 @@ export default function HistoryScreen() {
         resizeMode="contain"
       />
     );
+  };
+
+  const getAdviceColor = (advice: string) => {
+    const lowerAdvice = advice.toLowerCase();
+    if (lowerAdvice.includes('raise') || lowerAdvice.includes('call')) {
+      return '#4CAF50'; // green
+    } else if (lowerAdvice.includes('fold')) {
+      return '#F44336'; // red
+    } else if (lowerAdvice.includes('check')) {
+      return '#FF9800'; // orange
+    }
+    return '#666666'; // default gray
   };
 
   if (loading) {
@@ -215,12 +228,26 @@ export default function HistoryScreen() {
               </ThemedView>
 
               <ThemedText style={historyStyle.label}>AI Advice:</ThemedText>
-              <ThemedText style={historyStyle.cardValue}>
-                {game.advice?.flop ? `Flop: ${game.advice.flop}\n` : ''}
-                {game.advice?.turn ? `Turn: ${game.advice.turn}\n` : ''}
-                {game.advice?.river ? `River: ${game.advice.river}` : ''}
-                {!game.advice?.flop && !game.advice?.turn && !game.advice?.river ? 'No advice recorded' : ''}
-              </ThemedText>
+              <ThemedView style={historyStyle.adviceContainer}>
+                {game.advice?.flop && (
+                  <ThemedText style={[historyStyle.adviceText, { color: getAdviceColor(game.advice.flop) }]}>
+                    <ThemedText style={{ fontWeight: 'bold', color: '#333333' }}>Flop: </ThemedText>
+                    {game.advice.flop}
+                  </ThemedText>
+                )}
+                {game.advice?.turn && (
+                  <ThemedText style={[historyStyle.adviceText, { color: getAdviceColor(game.advice.turn) }]}>
+                    <ThemedText style={{ fontWeight: 'bold', color: '#333333' }}>Turn: </ThemedText>
+                    {game.advice.turn}
+                  </ThemedText>
+                )}
+                {game.advice?.river && (
+                  <ThemedText style={[historyStyle.adviceText, { color: getAdviceColor(game.advice.river) }]}>
+                    <ThemedText style={{ fontWeight: 'bold', color: '#333333' }}>River: </ThemedText>
+                    {game.advice.river}
+                  </ThemedText>
+                )}
+              </ThemedView>
 
               <ThemedText style={historyStyle.date}>
                 {game.createdAt ? new Date(game.createdAt.seconds * 1000).toLocaleString() : 'N/A'}

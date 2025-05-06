@@ -81,7 +81,6 @@ export default function GameScreen() {
   useEffect(() => {
     if (!user) return;
 
-    // Load the dummy game specifically
     const gameRef = ref(database, 'games/dummy');
     const unsubscribe = onValue(gameRef, (snapshot) => {
       const data = snapshot.val();
@@ -187,16 +186,19 @@ export default function GameScreen() {
         completed: true,
         roundOver: true,
         winner: user?.uid,
-        // Reset game values
-        flop: null,
-        turn: null,
-        river: null,
-        playerHands: {},
-        // Store current AI advice
+        // Save current card values
+        flop: gameData.flop || [],
+        turn: gameData.turn || '',
+        river: gameData.river || '',
+        playerHand: {
+          key: playerKey || '',
+          value: playerKey ? gameData.playerHands?.[playerKey] || [] : []
+        },
+        // Store only the recommendation for all played stages
         advice: {
-          flop: advice?.advice || '',
-          turn: advice?.advice || '',
-          river: advice?.advice || ''
+          flop: gameData.flop ? advice?.recommendation || '' : '',
+          turn: gameData.turn ? advice?.recommendation || '' : '',
+          river: gameData.river ? advice?.recommendation || '' : ''
         }
       });
 
@@ -232,16 +234,19 @@ export default function GameScreen() {
         completed: true,
         roundOver: true,
         winner: null,
-        // Reset game values
-        flop: null,
-        turn: null,
-        river: null,
-        playerHands: {},
-        // Store current AI advice
+        // Save current card values
+        flop: gameData.flop || [],
+        turn: gameData.turn || '',
+        river: gameData.river || '',
+        playerHand: {
+          key: playerKey || '',
+          value: playerKey ? gameData.playerHands?.[playerKey] || [] : []
+        },
+        // Store only the recommendation for all played stages
         advice: {
-          flop: advice?.advice || '',
-          turn: advice?.advice || '',
-          river: advice?.advice || ''
+          flop: gameData.flop ? advice?.recommendation || '' : '',
+          turn: gameData.turn ? advice?.recommendation || '' : '',
+          river: gameData.river ? advice?.recommendation || '' : ''
         }
       });
 
@@ -326,14 +331,23 @@ export default function GameScreen() {
 
   // Function to get color based on recommendation
   const getRecommendationColor = (recommendation: string) => {
-    switch(recommendation) {
-      case 'fold': return '#ff6b6b'; // red
-      case 'check': return '#ffe066'; // yellow
-      case 'call': return '#63c5da'; // blue
-      case 'raise': return '#4ecb71'; // green
+    const lowerRecommendation = recommendation.toLowerCase();
+    switch(lowerRecommendation) {
+      case 'fold': return '#F44336'; // red
+      case 'check': return '#FF9800'; // orange
+      case 'call': return '#4CAF50'; // green
+      case 'raise': return '#4CAF50'; // green
       case 'all-in': return '#9775fa'; // purple
       default: return '#a0a0a0'; // gray
     }
+  };
+
+  // Helper to convert hex color to rgba with alpha
+  const hexToRgba = (hex: string, alpha: number) => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
   };
 
   // Render the AI advice component
@@ -341,7 +355,8 @@ export default function GameScreen() {
     if (!advice) return null;
     
     const recommendationColor = getRecommendationColor(advice.recommendation);
-    
+    console.log("Recommendation: ", advice.recommendation);
+
     return (
       <ThemedView style={gameStyle.adviceContainer}>
         <ThemedText type="subtitle">AI Advisor</ThemedText>
@@ -357,13 +372,15 @@ export default function GameScreen() {
                 {advice.recommendation.toUpperCase()}
               </ThemedText>
             </ThemedView>
-            <ThemedText style={gameStyle.adviceText}>{advice.advice}</ThemedText>
+            <ThemedText style={[{ color: 'black', fontSize: 18, fontWeight: 'bold', marginTop: 12, marginBottom: 8 }]}> 
+              {advice.advice}
+            </ThemedText>
             <ThemedText style={gameStyle.reasoningText}>{advice.reasoning}</ThemedText>
             <ThemedView style={gameStyle.confidenceBar}>
               <ThemedView 
                 style={[
                   gameStyle.confidenceFill, 
-                  {width: `${advice.confidence}%`, backgroundColor: recommendationColor}
+                  {width: `${advice.confidence}%`, backgroundColor: hexToRgba(recommendationColor, Math.max(0.2, advice.confidence / 100))}
                 ]} 
               />
               <ThemedText style={gameStyle.confidenceText}>

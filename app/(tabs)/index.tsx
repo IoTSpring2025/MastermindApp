@@ -73,44 +73,6 @@ export default function HomeScreen() {
     setCurrentGameId(null);
   };
 
-  const handleConnectCamera = async () => {
-    if (Platform.OS === 'ios') {
-      Alert.alert(
-        'Connect to Camera',
-        'Please enable Bluetooth in your device settings to connect to the camera.',
-        [
-          {
-            text: 'Open Settings',
-            onPress: () => {
-              Linking.openURL('app-settings:');
-            },
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ]
-      );
-    } else {
-      Alert.alert(
-        'Connect to Camera',
-        'Please enable Bluetooth to connect to the camera.',
-        [
-          {
-            text: 'Enable Bluetooth',
-            onPress: () => {
-              Linking.openSettings();
-            },
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ]
-      );
-    }
-  };
-
   if (loading) {
     return (
       <ThemedView style={homeStyle.container}>
@@ -148,11 +110,7 @@ export default function HomeScreen() {
             title={isCreating ? "Creating..." : "Create Game"}
             disabled={isCreating}
           />
-          <ThemedButton
-            onPress={handleConnectCamera}
-            style={[homeStyle.button, homeStyle.cameraButton]}
-            title="Connect to Camera"
-          />
+  
         </ThemedView>
       ) : (
         <ThemedView style={styles.gameContainer}>

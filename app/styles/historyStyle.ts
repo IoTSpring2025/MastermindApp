@@ -102,5 +102,26 @@ export const historyStyle = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
-  }
+  },
+  cardsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  card: {
+    width: 60,
+    height: 90,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  cardImage: {
+    width: 60,
+    height: 90,
+    borderRadius: 8,
+  },
 }); 

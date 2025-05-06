@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { StyleSheet, Alert, View, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
-import { doc, getDoc, updateDoc, onSnapshot } from 'firebase/firestore';
-import { firestore } from '@/app/lib/firebase';
+import { ref, onValue } from 'firebase/database';
+import { database } from '@/app/lib/firebase';
 import { useAuth } from '@/app/lib/authContext';
 import { getPokerAdvice, PokerAdviceResponse } from '@/app/lib/chatgpt';
 import { ThemedView } from '@/components/ThemedView';
@@ -20,36 +20,45 @@ export default function GameScreen() {
   const [lastGameStage, setLastGameStage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!id) {
-      setLoading(false);
-      return;
-    }
-
     if (!user) return;
 
-    const gameRef = doc(firestore, 'games', id as string);
-    const unsubscribe = onSnapshot(gameRef, (doc) => {
-      if (doc.exists()) {
-        const data = doc.data();
-        setGameData(data);
-        
-        // Check if game is completed
+    // Always load the first available game from the database
+    const gamesRef = ref(database, 'games');
+    const unsubscribe = onValue(gamesRef, (snapshot) => {
+      const games = snapshot.val();
+      const gameKeys = games ? Object.keys(games) : [];
+      if (gameKeys.length > 0) {
+        const firstKey = gameKeys[0];
+        const data = games[firstKey];
+        console.log('Forcing load of first game:', firstKey, data);
+        // Determine player key: use user.uid if present, otherwise fallback to first player
+        let playerKey: string | undefined = user?.uid;
+        if (!playerKey || !data.players?.[playerKey]) {
+          playerKey = data.players ? Object.keys(data.players)[0] : undefined;
+        }
+        setGameData({
+          flop: data.flop || [],
+          turn: data.turn || null,
+          river: data.river || null,
+          playerHands: (data.players && playerKey) ? { [playerKey]: data.players[playerKey]?.hand || [] } : {},
+          call: data.call || null,
+          completed: data.completed || false,
+        });
         if (data.completed) {
           setGameData(null); // Clear game data to show create game message
         }
+        setLoading(false);
       } else {
-        Alert.alert('Error', 'Game not found');
-        router.replace('/');
+        setLoading(false);
+        Alert.alert('Error', 'No games found');
       }
-      setLoading(false);
     }, (error) => {
       console.error('Error listening to game updates:', error);
       Alert.alert('Error', 'Failed to connect to game');
       setLoading(false);
     });
-
     return () => unsubscribe();
-  }, [id, user]);
+  }, [user]);
 
   // Determine the current game stage
   const determineGameStage = useCallback(() => {
@@ -115,15 +124,16 @@ export default function GameScreen() {
 
     try {
       setLoading(true);
-      const gameRef = doc(firestore, 'games', id as string);
-      await updateDoc(gameRef, {
-        win: true,
-        completed: true,
-        roundOver: true,
-        winner: user?.uid
+      const gameRef = ref(database, `games/${id}/win`);
+      await onValue(gameRef, async (snapshot) => {
+        const win = snapshot.val();
+        if (win === true) {
+          Alert.alert('Success', 'Game marked as won!');
+          router.push('/(tabs)/history');
+        } else {
+          Alert.alert('Error', 'Game not marked as won');
+        }
       });
-      Alert.alert('Success', 'Game marked as won!');
-      router.push('/(tabs)/history');
     } catch (error) {
       console.error('Error updating game:', error);
       Alert.alert('Error', 'Failed to update game result');
@@ -137,15 +147,16 @@ export default function GameScreen() {
 
     try {
       setLoading(true);
-      const gameRef = doc(firestore, 'games', id as string);
-      await updateDoc(gameRef, {
-        win: false,
-        completed: true,
-        roundOver: true,
-        winner: null
+      const gameRef = ref(database, `games/${id}/win`);
+      await onValue(gameRef, async (snapshot) => {
+        const win = snapshot.val();
+        if (win === false) {
+          Alert.alert('Success', 'Game marked as lost');
+          router.push('/(tabs)/history');
+        } else {
+          Alert.alert('Error', 'Game not marked as lost');
+        }
       });
-      Alert.alert('Success', 'Game marked as lost');
-      router.push('/(tabs)/history');
     } catch (error) {
       console.error('Error updating game:', error);
       Alert.alert('Error', 'Failed to update game result');
@@ -158,19 +169,54 @@ export default function GameScreen() {
     if (!id || !user) return;
 
     try {
-      const gameRef = doc(firestore, 'games', id as string);
-      await updateDoc(gameRef, {
-        flop: null,
-        turn: null,
-        river: null,
-        playerHands: {},
-        call: null,
-        roundOver: false,
+      const gameRef = ref(database, `games/${id}/flop`);
+      await onValue(gameRef, async (snapshot) => {
+        const flop = snapshot.val();
+        if (flop) {
+          const gameRefTurn = ref(database, `games/${id}/turn`);
+          await onValue(gameRefTurn, async (snapshotTurn) => {
+            const turn = snapshotTurn.val();
+            if (turn) {
+              const gameRefRiver = ref(database, `games/${id}/river`);
+              await onValue(gameRefRiver, async (snapshotRiver) => {
+                const river = snapshotRiver.val();
+                if (river) {
+                  const gameRefPlayers = ref(database, `games/${id}/players`);
+                  await onValue(gameRefPlayers, async (snapshotPlayers) => {
+                    const players = snapshotPlayers.val();
+                    if (players) {
+                      const gameRefCall = ref(database, `games/${id}/call`);
+                      await onValue(gameRefCall, async (snapshotCall) => {
+                        const call = snapshotCall.val();
+                        if (call) {
+                          const gameRefCompleted = ref(database, `games/${id}/completed`);
+                          await onValue(gameRefCompleted, async (snapshotCompleted) => {
+                            const completed = snapshotCompleted.val();
+                            if (completed) {
+                              // Reset game data
+                              setGameData({
+                                flop: null,
+                                turn: null,
+                                river: null,
+                                playerHands: {},
+                                call: null,
+                                completed: false,
+                              });
+                              // Reset advice when game is reset
+                              setAdvice(null);
+                              setLastGameStage(null);
+                            }
+                          });
+                        }
+                      });
+                    }
+                  });
+                }
+              });
+            }
+          });
+        }
       });
-      
-      // Reset advice when game is reset
-      setAdvice(null);
-      setLastGameStage(null);
     } catch (error) {
       console.error('Error resetting game:', error);
       Alert.alert('Error', 'Failed to reset game');
@@ -229,6 +275,15 @@ export default function GameScreen() {
     );
   };
 
+  useEffect(() => {
+    // Debug: Print all data under 'games' in the Realtime Database
+    const gamesRef = ref(database, 'games');
+    const unsubscribe = onValue(gamesRef, (snapshot) => {
+      console.log('ALL GAMES SNAPSHOT:', snapshot.val());
+    });
+    return () => unsubscribe();
+  }, []);
+
   if (loading) {
     return (
       <ThemedView style={gameStyle.container}>
@@ -255,6 +310,13 @@ export default function GameScreen() {
   const { flop, turn, river, playerHands, call } = gameData;
   const playerCards = playerHands?.[user.uid] || [];
   const currentStage = determineGameStage();
+
+  // Build community cards array in correct order
+  const communityCards = [
+    ...(flop || []),
+    ...(turn ? [turn] : []),
+    ...(river ? [river] : []),
+  ];
 
   const getPlaceholderAdvice = (cards: string[]) => {
     if (cards.length !== 2) return '';
@@ -286,9 +348,9 @@ export default function GameScreen() {
       <ThemedView style={gameStyle.table}>
         {/* Community Cards */}
         <ThemedView style={gameStyle.communityCards}>
-          {[1, 2, 3, 4, 5].map((_, index) => (
+          {[0, 1, 2, 3, 4].map((index) => (
             <ThemedView key={index} style={gameStyle.card}>
-              <ThemedText>{flop?.[index] || turn || river || ""}</ThemedText>
+              <ThemedText>{communityCards[index] || ""}</ThemedText>
             </ThemedView>
           ))}
         </ThemedView>

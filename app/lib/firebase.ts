@@ -4,8 +4,10 @@ import { getFirestore } from "firebase/firestore";
 import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
+import { getDatabase } from "firebase/database";
 
 let firestore: any = {};
+let database: any = {};
 let auth: any = {};
 
 const getFirebaseConfig = () => {
@@ -34,6 +36,7 @@ const firebaseConfig = getFirebaseConfig();
 try {
   const app = initializeApp(firebaseConfig);
   firestore = getFirestore(app);
+  database = getDatabase(app);
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(ReactNativeAsyncStorage)
   });
@@ -41,5 +44,5 @@ try {
   console.error("Error initializing Firebase:", error);
 }
 
-export { firestore, auth };
-export default { firestore, auth };
+export { firestore, auth, database };
+export default { firestore, auth, database };

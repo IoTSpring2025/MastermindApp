@@ -4,7 +4,11 @@ import { componentStyle } from './componentStyle';
 export const gameStyle = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  contentContainer: {
     padding: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
   },
   centeredContainer: {
     flex: 1,
@@ -30,10 +34,21 @@ export const gameStyle = StyleSheet.create({
     width: 60,
     height: 90,
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: '#e0e0e0',
     borderRadius: 8,
+    margin: 4,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#ffffff',
+    overflow: 'hidden',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 8,
+    position: 'absolute',
+    top: 0,
+    left: 0,
   },
   handContainer: {
     marginBottom: 20,
@@ -54,7 +69,9 @@ export const gameStyle = StyleSheet.create({
   },
   buttonContainer: {
     ...componentStyle.buttonContainer,
-    marginHorizontal: 20,
+    marginHorizontal: 60,
+    marginBottom: 80,
+    paddingHorizontal: 30,
   },
   button: componentStyle.buttonLarge,
   winButton: componentStyle.buttonSuccess,

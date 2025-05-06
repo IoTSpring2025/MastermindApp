@@ -9,7 +9,7 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedButton } from '@/components/ThemedButton';
 import { gameStyle } from '@/app/styles/gameStyle';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { firestore } from '@/app/lib/firebase';
 
 // Add card image mapping
@@ -72,7 +72,6 @@ export default function GameScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const [gameData, setGameData] = useState<any>(null);
-  const [playerKey, setPlayerKey] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [advice, setAdvice] = useState<PokerAdviceResponse | null>(null);
   const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
@@ -81,54 +80,71 @@ export default function GameScreen() {
   useEffect(() => {
     if (!user) return;
 
-    const gameRef = ref(database, 'games/dummy');
-    const unsubscribe = onValue(gameRef, (snapshot) => {
-      const data = snapshot.val();
-      if (data) {
-        console.log('Loading dummy game:', data);
-        // Determine player key: use user.uid if present, otherwise fallback to first player
-        let resolvedPlayerKey: string | undefined = user?.uid;
-        if (!resolvedPlayerKey || !data.players?.[resolvedPlayerKey]) {
-          resolvedPlayerKey = data.players ? Object.keys(data.players)[0] : undefined;
-        }
-        setGameData({
-          flop: data.flop || [],
-          turn: data.turn || null,
-          river: data.river || null,
-          playerHands: (data.players && resolvedPlayerKey) ? { [resolvedPlayerKey]: data.players[resolvedPlayerKey]?.hand || [] } : {},
-          call: data.call || null,
-          completed: data.completed || false,
-        });
-        setPlayerKey(resolvedPlayerKey);
-        if (data.completed) {
-          setGameData(null); // Clear game data to show create game message
-        }
-        setLoading(false);
-      } else {
-        setLoading(false);
-        Alert.alert('Error', 'Dummy game not found');
-      }
-    }, (error) => {
-      console.error('Error listening to game updates:', error);
-      Alert.alert('Error', 'Failed to connect to game');
-      setLoading(false);
+    // Clear all endpoints when a new game is started
+    const clearGameState = async () => {
+      await set(ref(database, 'hand'), "");
+      await set(ref(database, 'flop'), "");
+      await set(ref(database, 'turn'), "");
+      await set(ref(database, 'river'), "");
+    };
+    clearGameState();
+
+    // Listen to the new flat structure
+    const handRef = ref(database, 'hand');
+    const flopRef = ref(database, 'flop');
+    const turnRef = ref(database, 'turn');
+    const riverRef = ref(database, 'river');
+
+    const handListener = onValue(handRef, (snapshot) => {
+      const handVal = snapshot.val() || [];
+      console.log('RealtimeDB hand value:', handVal);
+      setGameData((prev: any) => {
+        const updated = { ...prev, hand: handVal };
+        console.log('Setting gameData.hand:', updated.hand);
+        console.log('Updated gameData after hand:', updated);
+        return updated;
+      });
     });
-    return () => unsubscribe();
+    const flopListener = onValue(flopRef, (snapshot) => {
+      const flopVal = snapshot.val() || [];
+      console.log('RealtimeDB flop value:', flopVal);
+      setGameData((prev: any) => {
+        const updated = { ...prev, flop: flopVal };
+        console.log('Setting gameData.flop:', updated.flop);
+        console.log('Updated gameData after flop:', updated);
+        return updated;
+      });
+    });
+    const turnListener = onValue(turnRef, (snapshot) => {
+      setGameData((prev: any) => ({ ...prev, turn: snapshot.val() || null }));
+    });
+    const riverListener = onValue(riverRef, (snapshot) => {
+      setGameData((prev: any) => ({ ...prev, river: snapshot.val() || null }));
+    });
+
+    setLoading(false);
+    return () => {
+      handListener();
+      flopListener();
+      turnListener();
+      riverListener();
+    };
   }, [user]);
 
   // Determine the current game stage
   const determineGameStage = useCallback(() => {
     if (!gameData) return null;
-    
-    const { flop, turn, river, playerHands } = gameData;
-    const playerCards = playerHands?.[playerKey || ''] || [];
-    
-    if (playerCards.length > 0 && !flop) return 'pre-flop';
-    if (flop && !turn) return 'flop';
-    if (turn && !river) return 'turn';
-    if (river) return 'river';
+    const { hand, flop, turn, river } = gameData;
+    // Preflop: hand present, no community cards
+    if (hand && hand.length === 2 && (!flop || flop.length === 0)) return 'preflop';
+    // Flop: 3 community cards
+    if (flop && flop.length === 3 && !turn && !river) return 'flop';
+    // Turn: 3 flop + 1 turn
+    if (flop && flop.length === 3 && turn && !river) return 'turn';
+    // River: 3 flop + 1 turn + 1 river
+    if (flop && flop.length === 3 && turn && river) return 'river';
     return null;
-  }, [gameData, playerKey]);
+  }, [gameData]);
 
   // Get ChatGPT advice when the game stage changes
   useEffect(() => {
@@ -142,22 +158,20 @@ export default function GameScreen() {
   const fetchPokerAdvice = async (gameStage: string) => {
     if (!gameData || !user) return;
 
-    const { flop, turn, river, playerHands } = gameData;
-    const playerCards = playerHands?.[playerKey || ''] || [];
-    
-    // Don't fetch advice if we don't have player cards
-    if (!playerCards.length) return;
-    
+    const { hand, flop, turn, river } = gameData;
+    // Only give advice if we have exactly 2 player cards
+    if (!hand || hand.length !== 2 || !hand[0] || !hand[1]) return;
+
     // Prepare community cards based on game stage
     let communityCards: string[] = [];
     if (flop) communityCards = [...flop];
     if (turn) communityCards.push(turn);
     if (river) communityCards.push(river);
-    
+
     setIsLoadingAdvice(true);
     try {
       const adviceResponse = await getPokerAdvice(
-        playerCards,
+        hand,
         communityCards,
         gameStage as 'pre-flop' | 'flop' | 'turn' | 'river'
       );
@@ -181,6 +195,15 @@ export default function GameScreen() {
     try {
       setLoading(true);
       const gameRef = doc(firestore, 'games', id as string);
+      const currentStage = determineGameStage();
+      // Get existing advice to merge
+      let existingAdvice = {};
+      try {
+        const gameSnap = await getDoc(gameRef);
+        if (gameSnap.exists() && gameSnap.data().advice) {
+          existingAdvice = gameSnap.data().advice;
+        }
+      } catch (e) { /* ignore */ }
       await updateDoc(gameRef, {
         win: true,
         completed: true,
@@ -191,27 +214,24 @@ export default function GameScreen() {
         turn: gameData.turn || '',
         river: gameData.river || '',
         playerHand: {
-          key: playerKey || '',
-          value: playerKey ? gameData.playerHands?.[playerKey] || [] : []
+          key: 'hand',
+          value: gameData.hand || []
         },
-        // Store only the recommendation for all played stages
+        // Merge advice for all stages
         advice: {
-          flop: gameData.flop ? advice?.recommendation || '' : '',
-          turn: gameData.turn ? advice?.recommendation || '' : '',
-          river: gameData.river ? advice?.recommendation || '' : ''
+          ...existingAdvice,
+          [currentStage || 'preflop']: advice?.recommendation || ''
         }
       });
 
       // Clear real-time database values
-      const realtimeGameRef = ref(database, `games/${id}`);
-      await set(realtimeGameRef, {
-        flop: null,
-        turn: null,
-        river: null,
-        players: {},
-        call: null,
-        completed: true
-      });
+      await set(ref(database, 'flop'), "");
+      await set(ref(database, 'turn'), "");
+      await set(ref(database, 'river'), "");
+      await set(ref(database, 'hand'), "");
+      await set(ref(database, 'hands'), "");
+      await set(ref(database, 'game_over'), true);
+      setAdvice(null); // Clear old AI advice after game ends
 
       Alert.alert('Success', 'Game marked as won!');
       router.push('/(tabs)/history');
@@ -229,6 +249,15 @@ export default function GameScreen() {
     try {
       setLoading(true);
       const gameRef = doc(firestore, 'games', id as string);
+      const currentStage = determineGameStage();
+      // Get existing advice to merge
+      let existingAdvice = {};
+      try {
+        const gameSnap = await getDoc(gameRef);
+        if (gameSnap.exists() && gameSnap.data().advice) {
+          existingAdvice = gameSnap.data().advice;
+        }
+      } catch (e) { /* ignore */ }
       await updateDoc(gameRef, {
         win: false,
         completed: true,
@@ -239,27 +268,24 @@ export default function GameScreen() {
         turn: gameData.turn || '',
         river: gameData.river || '',
         playerHand: {
-          key: playerKey || '',
-          value: playerKey ? gameData.playerHands?.[playerKey] || [] : []
+          key: 'hand',
+          value: gameData.hand || []
         },
-        // Store only the recommendation for all played stages
+        // Merge advice for all stages
         advice: {
-          flop: gameData.flop ? advice?.recommendation || '' : '',
-          turn: gameData.turn ? advice?.recommendation || '' : '',
-          river: gameData.river ? advice?.recommendation || '' : ''
+          ...existingAdvice,
+          [currentStage || 'preflop']: advice?.recommendation || ''
         }
       });
 
       // Clear real-time database values
-      const realtimeGameRef = ref(database, `games/${id}`);
-      await set(realtimeGameRef, {
-        flop: null,
-        turn: null,
-        river: null,
-        players: {},
-        call: null,
-        completed: true
-      });
+      await set(ref(database, 'flop'), "");
+      await set(ref(database, 'turn'), "");
+      await set(ref(database, 'river'), "");
+      await set(ref(database, 'hand'), "");
+      await set(ref(database, 'hands'), "");
+      await set(ref(database, 'game_over'), true);
+      setAdvice(null); // Clear old AI advice after game ends
 
       Alert.alert('Success', 'Game marked as lost');
       router.push('/(tabs)/history');
@@ -272,57 +298,22 @@ export default function GameScreen() {
   };
 
   const resetGame = async () => {
-    if (!id || !user) return;
-
     try {
-      const gameRef = ref(database, `games/${id}/flop`);
-      await onValue(gameRef, async (snapshot) => {
-        const flop = snapshot.val();
-        if (flop) {
-          const gameRefTurn = ref(database, `games/${id}/turn`);
-          await onValue(gameRefTurn, async (snapshotTurn) => {
-            const turn = snapshotTurn.val();
-            if (turn) {
-              const gameRefRiver = ref(database, `games/${id}/river`);
-              await onValue(gameRefRiver, async (snapshotRiver) => {
-                const river = snapshotRiver.val();
-                if (river) {
-                  const gameRefPlayers = ref(database, `games/${id}/players`);
-                  await onValue(gameRefPlayers, async (snapshotPlayers) => {
-                    const players = snapshotPlayers.val();
-                    if (players) {
-                      const gameRefCall = ref(database, `games/${id}/call`);
-                      await onValue(gameRefCall, async (snapshotCall) => {
-                        const call = snapshotCall.val();
-                        if (call) {
-                          const gameRefCompleted = ref(database, `games/${id}/completed`);
-                          await onValue(gameRefCompleted, async (snapshotCompleted) => {
-                            const completed = snapshotCompleted.val();
-                            if (completed) {
-                              // Reset game data
-                              setGameData({
-                                flop: null,
-                                turn: null,
-                                river: null,
-                                playerHands: {},
-                                call: null,
-                                completed: false,
-                              });
-                              // Reset advice when game is reset
-                              setAdvice(null);
-                              setLastGameStage(null);
-                            }
-                          });
-                        }
-                      });
-                    }
-                  });
-                }
-              });
-            }
-          });
-        }
+      // Reset all fields in the flat structure
+      await set(ref(database, 'hand'), "");
+      await set(ref(database, 'flop'), "");
+      await set(ref(database, 'turn'), "");
+      await set(ref(database, 'river'), "");
+      setGameData({
+        flop: null,
+        turn: null,
+        river: null,
+        hand: null,
+        call: null,
+        completed: false,
       });
+      setAdvice(null);
+      setLastGameStage(null);
     } catch (error) {
       console.error('Error resetting game:', error);
       Alert.alert('Error', 'Failed to reset game');
@@ -352,8 +343,20 @@ export default function GameScreen() {
 
   // Render the AI advice component
   const renderAdvice = () => {
+    if (!gameData || !user) return null;
+    const { hand } = gameData;
+
+    // Only show advice if playerCards (hand) is present and non-empty
+    if (!hand || hand.length === 0) {
+      return (
+        <ThemedView style={gameStyle.adviceContainer}>
+          <ThemedText type="subtitle">AI Advisor</ThemedText>
+          <ThemedText>Waiting for dealer...</ThemedText>
+        </ThemedView>
+      );
+    }
     if (!advice) return null;
-    
+
     const recommendationColor = getRecommendationColor(advice.recommendation);
     console.log("Recommendation: ", advice.recommendation);
 
@@ -367,7 +370,7 @@ export default function GameScreen() {
           </View>
         ) : (
           <>
-            <ThemedView style={[gameStyle.recommendationBadge, {backgroundColor: recommendationColor}]}>
+            <ThemedView style={[gameStyle.recommendationBadge, {backgroundColor: recommendationColor}]}> 
               <ThemedText style={gameStyle.recommendationText}>
                 {advice.recommendation.toUpperCase()}
               </ThemedText>
@@ -425,8 +428,8 @@ export default function GameScreen() {
     );
   }
 
-  const { flop, turn, river, playerHands, call } = gameData;
-  const playerCards = playerKey ? playerHands?.[playerKey] || [] : [];
+  const { hand, flop, turn, river, call } = gameData;
+  const playerCards = hand || [];
   const currentStage = determineGameStage();
 
   // Build community cards array in correct order
@@ -435,6 +438,10 @@ export default function GameScreen() {
     ...(turn ? [turn] : []),
     ...(river ? [river] : []),
   ];
+
+  // Debug: Print what is being rendered for hand and flop
+  console.log('Rendering playerCards:', playerCards);
+  console.log('Rendering communityCards:', communityCards);
 
   const getPlaceholderAdvice = (cards: string[]) => {
     if (cards.length !== 2) return '';

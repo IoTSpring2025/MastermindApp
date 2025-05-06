@@ -46,16 +46,20 @@ export const profileStyle = StyleSheet.create({
     statItem: {
       alignItems: 'center',
       flex: 1,
+      justifyContent: 'center',
+      paddingVertical: 8,
     },
     statValue: {
-      fontSize: 28,
+      fontSize: 24,
       fontWeight: 'bold',
       color: '#333333',
+      textAlign: 'center',
+      marginBottom: 4,
     },
     statLabel: {
-      marginTop: 8,
       fontSize: 14,
       color: '#666666',
+      textAlign: 'center',
     },
     signOutButton: {
       marginTop: 40,

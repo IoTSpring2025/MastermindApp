@@ -69,19 +69,34 @@ export default function ProfileScreen() {
         <ThemedView style={profileStyle.statsSection}>
           <ThemedText type="subtitle">Game Statistics</ThemedText>
           <ThemedView style={profileStyle.statsContainer}>
-            <ThemedView style={profileStyle.statItem}>
-              <ThemedText style={profileStyle.statValue}>{stats.wins}</ThemedText>
-              <ThemedText style={profileStyle.statLabel}>Wins</ThemedText>
+            <ThemedView style={[profileStyle.statItem, { alignItems: 'center' }]}>
+              <ThemedText style={[profileStyle.statValue, { textAlign: 'center', color: '#4CAF50' }]}>{stats.wins}</ThemedText>
+              <ThemedText style={[profileStyle.statLabel, { textAlign: 'center' }]}>Wins</ThemedText>
             </ThemedView>
-            <ThemedView style={profileStyle.statItem}>
-              <ThemedText style={profileStyle.statValue}>{stats.losses}</ThemedText>
-              <ThemedText style={profileStyle.statLabel}>Losses</ThemedText>
+            <ThemedView style={[profileStyle.statItem, { alignItems: 'center' }]}>
+              <ThemedText style={[profileStyle.statValue, { textAlign: 'center', color: '#F44336' }]}>{stats.losses}</ThemedText>
+              <ThemedText style={[profileStyle.statLabel, { textAlign: 'center' }]}>Losses</ThemedText>
             </ThemedView>
-            <ThemedView style={profileStyle.statItem}>
-              <ThemedText style={profileStyle.statValue}>
+            <ThemedView style={[profileStyle.statItem, { alignItems: 'center' }]}>
+              <ThemedText style={[profileStyle.statValue, { textAlign: 'center' }]}>
                 {stats.wins + stats.losses}
               </ThemedText>
-              <ThemedText style={profileStyle.statLabel}>Total Games</ThemedText>
+              <ThemedText style={[profileStyle.statLabel, { textAlign: 'center' }]}>Games</ThemedText>
+            </ThemedView>
+            <ThemedView style={[profileStyle.statItem, { alignItems: 'center' }]}>
+              <ThemedText style={[profileStyle.statValue, { 
+                textAlign: 'center', 
+                color: stats.wins + stats.losses > 0 
+                  ? (stats.wins / (stats.wins + stats.losses)) >= 0.5 
+                    ? '#4CAF50'  // green for >= 50%
+                    : '#F44336'  // red for < 50%
+                  : '#333333'    // default color for no games
+              }]}>
+                {stats.wins + stats.losses > 0 
+                  ? `${Math.round((stats.wins / (stats.wins + stats.losses)) * 100)}%`
+                  : '0%'}
+              </ThemedText>
+              <ThemedText style={[profileStyle.statLabel, { textAlign: 'center' }]}>Win Rate</ThemedText>
             </ThemedView>
           </ThemedView>
         </ThemedView>

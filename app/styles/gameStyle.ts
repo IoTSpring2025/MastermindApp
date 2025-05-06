@@ -1,4 +1,4 @@
-import { StyleSheet } from 'react-native';
+import { StyleSheet, Platform } from 'react-native';
 import { componentStyle } from './componentStyle';
 
 export const gameStyle = StyleSheet.create({
@@ -13,13 +13,12 @@ export const gameStyle = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    marginBottom: 30,
+    marginBottom: 20,
     textAlign: 'center',
+    fontSize: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 20,
   },
   table: {
-    backgroundColor: '#2d2d2d',
-    borderRadius: 20,
-    padding: 20,
     marginBottom: 20,
   },
   communityCards: {
@@ -30,12 +29,11 @@ export const gameStyle = StyleSheet.create({
   card: {
     width: 60,
     height: 90,
-    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ccc',
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ccc',
   },
   handContainer: {
     marginBottom: 20,
@@ -54,7 +52,10 @@ export const gameStyle = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
   },
-  buttonContainer: componentStyle.buttonContainer,
+  buttonContainer: {
+    ...componentStyle.buttonContainer,
+    marginHorizontal: 20,
+  },
   button: componentStyle.buttonLarge,
   winButton: componentStyle.buttonSuccess,
   lossButton: componentStyle.buttonDanger,
@@ -127,4 +128,17 @@ export const gameStyle = StyleSheet.create({
     backgroundColor: '#4285F4',
     marginBottom: 15,
   },
+  placeholderAdvice: {
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: 'rgba(66, 133, 244, 0.1)',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(66, 133, 244, 0.2)',
+  },
+  placeholderAdviceText: {
+    fontSize: 14,
+    color: '#4285F4',
+    textAlign: 'center',
+  }
 });

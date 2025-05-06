@@ -250,6 +250,26 @@ export default function GameScreen() {
   const playerCards = playerHands?.[user.uid] || [];
   const currentStage = determineGameStage();
 
+  const getPlaceholderAdvice = (cards: string[]) => {
+    if (cards.length !== 2) return '';
+    
+    // Simple placeholder advice based on card values
+    const [card1, card2] = cards;
+    const value1 = card1.charAt(0);
+    const value2 = card2.charAt(0);
+    const sameSuit = card1.charAt(1) === card2.charAt(1);
+    
+    if (value1 === value2) {
+      return "Pocket pair - Consider raising pre-flop";
+    } else if (sameSuit) {
+      return "Suited cards - Playable if connected";
+    } else if (['A', 'K', 'Q'].includes(value1) && ['A', 'K', 'Q'].includes(value2)) {
+      return "Broadway cards - Strong starting hand";
+    } else {
+      return "Consider position and stack size";
+    }
+  };
+
   return (
     <ThemedView style={gameStyle.container}>
       <ThemedText type="title" style={gameStyle.title}>
@@ -260,21 +280,11 @@ export default function GameScreen() {
       <ThemedView style={gameStyle.table}>
         {/* Community Cards */}
         <ThemedView style={gameStyle.communityCards}>
-          {flop && flop.map((card: string, index: number) => (
+          {[1, 2, 3, 4, 5].map((_, index) => (
             <ThemedView key={index} style={gameStyle.card}>
-              <ThemedText>{card}</ThemedText>
+              <ThemedText>{flop?.[index] || turn || river || ""}</ThemedText>
             </ThemedView>
           ))}
-          {turn && (
-            <ThemedView style={gameStyle.card}>
-              <ThemedText>{turn}</ThemedText>
-            </ThemedView>
-          )}
-          {river && (
-            <ThemedView style={gameStyle.card}>
-              <ThemedText>{river}</ThemedText>
-            </ThemedView>
-          )}
         </ThemedView>
       </ThemedView>
 
@@ -282,11 +292,16 @@ export default function GameScreen() {
       <ThemedView style={gameStyle.handContainer}>
         <ThemedText type="subtitle">Your Hand</ThemedText>
         <ThemedView style={gameStyle.hand}>
-          {playerCards.map((card: string, index: number) => (
+          {[1, 2].map((_, index) => (
             <ThemedView key={index} style={gameStyle.card}>
-              <ThemedText>{card}</ThemedText>
+              <ThemedText>{playerCards[index] || ""}</ThemedText>
             </ThemedView>
           ))}
+        </ThemedView>
+        <ThemedView style={gameStyle.placeholderAdvice}>
+          <ThemedText style={gameStyle.placeholderAdviceText}>
+            {playerCards.length > 0 ? getPlaceholderAdvice(playerCards) : "No game state detected yet. Deal cards to begin."}
+          </ThemedText>
         </ThemedView>
       </ThemedView>
 

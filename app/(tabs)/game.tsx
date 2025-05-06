@@ -30,7 +30,13 @@ export default function GameScreen() {
     const gameRef = doc(firestore, 'games', id as string);
     const unsubscribe = onSnapshot(gameRef, (doc) => {
       if (doc.exists()) {
-        setGameData(doc.data());
+        const data = doc.data();
+        setGameData(data);
+        
+        // Check if game is completed
+        if (data.completed) {
+          setGameData(null); // Clear game data to show create game message
+        }
       } else {
         Alert.alert('Error', 'Game not found');
         router.replace('/');
@@ -105,38 +111,46 @@ export default function GameScreen() {
   };
 
   const handleWin = async () => {
-    if (!id || !user) return;
+    if (!id) return;
 
     try {
+      setLoading(true);
       const gameRef = doc(firestore, 'games', id as string);
       await updateDoc(gameRef, {
-        winner: user.uid,
+        win: true,
+        completed: true,
         roundOver: true,
+        winner: user?.uid
       });
-
-      Alert.alert('Success', 'You won the round!');
-      resetGame();
+      Alert.alert('Success', 'Game marked as won!');
+      router.push('/(tabs)/history');
     } catch (error) {
       console.error('Error updating game:', error);
-      Alert.alert('Error', 'Failed to update game');
+      Alert.alert('Error', 'Failed to update game result');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLoss = async () => {
-    if (!id || !user) return;
+    if (!id) return;
 
     try {
+      setLoading(true);
       const gameRef = doc(firestore, 'games', id as string);
       await updateDoc(gameRef, {
-        winner: null,
+        win: false,
+        completed: true,
         roundOver: true,
+        winner: null
       });
-
-      Alert.alert('Game Over', 'You lost the round.');
-      resetGame();
+      Alert.alert('Success', 'Game marked as lost');
+      router.push('/(tabs)/history');
     } catch (error) {
       console.error('Error updating game:', error);
-      Alert.alert('Error', 'Failed to update game');
+      Alert.alert('Error', 'Failed to update game result');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -223,7 +237,7 @@ export default function GameScreen() {
     );
   }
 
-  if (!id) {
+  if (!id || !gameData || !user) {
     return (
       <ThemedView style={gameStyle.centeredContainer}>
         <ThemedText type="title" style={gameStyle.title}>
@@ -234,14 +248,6 @@ export default function GameScreen() {
           style={gameStyle.button}
           title="Back to Home"
         />
-      </ThemedView>
-    );
-  }
-
-  if (!gameData || !user) {
-    return (
-      <ThemedView style={gameStyle.container}>
-        <ThemedText>Game not found or user not authenticated</ThemedText>
       </ThemedView>
     );
   }

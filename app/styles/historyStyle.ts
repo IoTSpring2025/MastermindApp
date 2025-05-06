@@ -12,6 +12,21 @@ export const historyStyle = StyleSheet.create({
     paddingBottom: 20,
     alignItems: 'center',
   },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 16,
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+  },
+  refreshing: {
+    transform: [{ rotate: '180deg' }],
+  },
   gameCard: {
     marginBottom: 16,
     borderRadius: 16,

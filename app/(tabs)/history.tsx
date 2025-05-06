@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ScrollView, Alert } from 'react-native';
+import { ScrollView, Alert, TouchableOpacity } from 'react-native';
 import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { firestore } from '@/app/lib/firebase';
 import { useAuth } from '@/app/lib/authContext';
@@ -7,41 +7,46 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { historyStyle } from '@/app/styles/historyStyle';
 import { Game } from '@/app/types/game';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function HistoryScreen() {
   const { user, loading } = useAuth();
   const [games, setGames] = useState<Game[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchGames = async () => {
+    if (!user) return;
+
+    try {
+      setRefreshing(true);
+      const gamesRef = collection(firestore, 'games');
+      const q = query(
+        gamesRef,
+        where('player_id', '==', user.email),
+        orderBy('createdAt', 'desc')
+      );
+      const querySnapshot = await getDocs(q);
+      const gamesData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Game[];
+      setGames(gamesData);
+      setError(null);
+    } catch (error) {
+      console.error('Error fetching games:', error);
+      setError('Failed to load game history');
+      Alert.alert(
+        'Error',
+        'Unable to load game history. Please check your connection and try again.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchGames = async () => {
-      if (!user) return;
-
-      try {
-        const gamesRef = collection(firestore, 'games');
-        const q = query(
-          gamesRef,
-          where('player_id', '==', user.email),
-          orderBy('createdAt', 'desc')
-        );
-        const querySnapshot = await getDocs(q);
-        const gamesData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Game[];
-        setGames(gamesData);
-        setError(null);
-      } catch (error) {
-        console.error('Error fetching games:', error);
-        setError('Failed to load game history');
-        Alert.alert(
-          'Error',
-          'Unable to load game history. Please check your connection and try again.',
-          [{ text: 'OK' }]
-        );
-      }
-    };
-
     fetchGames();
   }, [user]);
 
@@ -64,7 +69,21 @@ export default function HistoryScreen() {
   return (
     <ScrollView style={historyStyle.container}>
       <ThemedView style={historyStyle.header}>
-        <ThemedText type="title">Game History</ThemedText>
+        <ThemedView style={historyStyle.headerContent}>
+          <ThemedText type="title">Game History</ThemedText>
+          <TouchableOpacity 
+            onPress={fetchGames}
+            style={historyStyle.refreshButton}
+            disabled={refreshing}
+          >
+            <Ionicons 
+              name="refresh" 
+              size={24} 
+              color="#666666"
+              style={refreshing ? historyStyle.refreshing : undefined}
+            />
+          </TouchableOpacity>
+        </ThemedView>
       </ThemedView>
 
       {error ? (
@@ -103,6 +122,14 @@ export default function HistoryScreen() {
                 {game.flop ? `Flop: ${game.flop.join(', ')}` : 'N/A'}
                 {game.turn ? `\nTurn: ${game.turn}` : ''}
                 {game.river ? `\nRiver: ${game.river}` : ''}
+              </ThemedText>
+
+              <ThemedText style={historyStyle.label}>AI Advice:</ThemedText>
+              <ThemedText style={historyStyle.cardValue}>
+                {game.advice?.flop ? `Flop: ${game.advice.flop}\n` : ''}
+                {game.advice?.turn ? `Turn: ${game.advice.turn}\n` : ''}
+                {game.advice?.river ? `River: ${game.advice.river}` : ''}
+                {!game.advice?.flop && !game.advice?.turn && !game.advice?.river ? 'No advice recorded' : ''}
               </ThemedText>
 
               <ThemedText style={historyStyle.date}>

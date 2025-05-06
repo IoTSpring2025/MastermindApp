@@ -30,7 +30,13 @@ export default function GameScreen() {
     const gameRef = doc(firestore, 'games', id as string);
     const unsubscribe = onSnapshot(gameRef, (doc) => {
       if (doc.exists()) {
-        setGameData(doc.data());
+        const data = doc.data();
+        setGameData(data);
+        
+        // Check if game is completed
+        if (data.completed) {
+          setGameData(null); // Clear game data to show create game message
+        }
       } else {
         Alert.alert('Error', 'Game not found');
         router.replace('/');
@@ -105,38 +111,46 @@ export default function GameScreen() {
   };
 
   const handleWin = async () => {
-    if (!id || !user) return;
+    if (!id) return;
 
     try {
+      setLoading(true);
       const gameRef = doc(firestore, 'games', id as string);
       await updateDoc(gameRef, {
-        winner: user.uid,
+        win: true,
+        completed: true,
         roundOver: true,
+        winner: user?.uid
       });
-
-      Alert.alert('Success', 'You won the round!');
-      resetGame();
+      Alert.alert('Success', 'Game marked as won!');
+      router.push('/(tabs)/history');
     } catch (error) {
       console.error('Error updating game:', error);
-      Alert.alert('Error', 'Failed to update game');
+      Alert.alert('Error', 'Failed to update game result');
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLoss = async () => {
-    if (!id || !user) return;
+    if (!id) return;
 
     try {
+      setLoading(true);
       const gameRef = doc(firestore, 'games', id as string);
       await updateDoc(gameRef, {
-        winner: null,
+        win: false,
+        completed: true,
         roundOver: true,
+        winner: null
       });
-
-      Alert.alert('Game Over', 'You lost the round.');
-      resetGame();
+      Alert.alert('Success', 'Game marked as lost');
+      router.push('/(tabs)/history');
     } catch (error) {
       console.error('Error updating game:', error);
-      Alert.alert('Error', 'Failed to update game');
+      Alert.alert('Error', 'Failed to update game result');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -223,7 +237,7 @@ export default function GameScreen() {
     );
   }
 
-  if (!id) {
+  if (!id || !gameData || !user) {
     return (
       <ThemedView style={gameStyle.centeredContainer}>
         <ThemedText type="title" style={gameStyle.title}>
@@ -238,17 +252,29 @@ export default function GameScreen() {
     );
   }
 
-  if (!gameData || !user) {
-    return (
-      <ThemedView style={gameStyle.container}>
-        <ThemedText>Game not found or user not authenticated</ThemedText>
-      </ThemedView>
-    );
-  }
-
   const { flop, turn, river, playerHands, call } = gameData;
   const playerCards = playerHands?.[user.uid] || [];
   const currentStage = determineGameStage();
+
+  const getPlaceholderAdvice = (cards: string[]) => {
+    if (cards.length !== 2) return '';
+    
+    // Simple placeholder advice based on card values
+    const [card1, card2] = cards;
+    const value1 = card1.charAt(0);
+    const value2 = card2.charAt(0);
+    const sameSuit = card1.charAt(1) === card2.charAt(1);
+    
+    if (value1 === value2) {
+      return "Pocket pair - Consider raising pre-flop";
+    } else if (sameSuit) {
+      return "Suited cards - Playable if connected";
+    } else if (['A', 'K', 'Q'].includes(value1) && ['A', 'K', 'Q'].includes(value2)) {
+      return "Broadway cards - Strong starting hand";
+    } else {
+      return "Consider position and stack size";
+    }
+  };
 
   return (
     <ThemedView style={gameStyle.container}>
@@ -260,21 +286,11 @@ export default function GameScreen() {
       <ThemedView style={gameStyle.table}>
         {/* Community Cards */}
         <ThemedView style={gameStyle.communityCards}>
-          {flop && flop.map((card: string, index: number) => (
+          {[1, 2, 3, 4, 5].map((_, index) => (
             <ThemedView key={index} style={gameStyle.card}>
-              <ThemedText>{card}</ThemedText>
+              <ThemedText>{flop?.[index] || turn || river || ""}</ThemedText>
             </ThemedView>
           ))}
-          {turn && (
-            <ThemedView style={gameStyle.card}>
-              <ThemedText>{turn}</ThemedText>
-            </ThemedView>
-          )}
-          {river && (
-            <ThemedView style={gameStyle.card}>
-              <ThemedText>{river}</ThemedText>
-            </ThemedView>
-          )}
         </ThemedView>
       </ThemedView>
 
@@ -282,11 +298,16 @@ export default function GameScreen() {
       <ThemedView style={gameStyle.handContainer}>
         <ThemedText type="subtitle">Your Hand</ThemedText>
         <ThemedView style={gameStyle.hand}>
-          {playerCards.map((card: string, index: number) => (
+          {[1, 2].map((_, index) => (
             <ThemedView key={index} style={gameStyle.card}>
-              <ThemedText>{card}</ThemedText>
+              <ThemedText>{playerCards[index] || ""}</ThemedText>
             </ThemedView>
           ))}
+        </ThemedView>
+        <ThemedView style={gameStyle.placeholderAdvice}>
+          <ThemedText style={gameStyle.placeholderAdviceText}>
+            {playerCards.length > 0 ? getPlaceholderAdvice(playerCards) : "No game state detected yet. Deal cards to begin."}
+          </ThemedText>
         </ThemedView>
       </ThemedView>
 

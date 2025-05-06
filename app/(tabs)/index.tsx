@@ -23,23 +23,23 @@ export default function HomeScreen() {
 
     setIsCreating(true);
     try {
-      // Generate a random game ID
-      const gameId = Math.random().toString(36).substring(2, 8);
-      
-      const gameData = {
-        game_id: gameId,
+      const gameRef = await addDoc(collection(firestore, 'games'), {
         player_id: user.email,
-        hand: ["", ""], // Placeholder for player's two cards
-        flop: ["", "", ""],
-        turn: "",
-        river: "",
-        win: false,
-        timestamp: new Date()
-      };
-      
-      const gameRef = await addDoc(collection(firestore, 'games'), gameData);
-      setCurrentGameId(gameRef.id);
-      console.log('Game created successfully with ID:', gameRef.id);
+        createdAt: new Date(),
+        status: 'waiting',
+        hand: [],
+        gameId: user.uid + new Date().getTime(),
+        advice: {
+          flop: '',
+          turn: '',
+          river: ''
+        },
+        flop: [],
+        turn: '',
+        river: ''
+      });
+
+      router.push(`/game?id=${gameRef.id}`);
     } catch (error: any) {
       console.error('Error creating game:', error);
       let errorMessage = 'Failed to create game. Please check your connection and try again.';

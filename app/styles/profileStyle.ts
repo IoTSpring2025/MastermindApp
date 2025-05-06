@@ -3,36 +3,50 @@ import { StyleSheet } from 'react-native';
 export const profileStyle = StyleSheet.create({
     container: {
       flex: 1,
-      padding: 20,
+      padding: 16,
     },
     header: {
       alignItems: 'center',
-      paddingVertical: 40,
+      paddingVertical: 20,
     },
-    name: {
-      marginTop: 16,
+    content: {
+      flex: 1,
+      padding: 16,
+    },
+    infoSection: {
+      marginBottom: 24,
     },
     email: {
-      marginTop: 4,
+      marginTop: 8,
       opacity: 0.7,
     },
-    section: {
-      marginTop: 20,
+    statsSection: {
+      marginBottom: 24,
     },
-    itemContainer: {
+    statsContainer: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
       marginTop: 16,
+      backgroundColor: '#f5f5f5',
       borderRadius: 12,
-      overflow: 'hidden',
+      padding: 16,
+    },
+    statItem: {
+      alignItems: 'center',
+      flex: 1,
+    },
+    statValue: {
+      fontSize: 24,
+      fontWeight: 'bold',
+      color: '#333333',
+    },
+    statLabel: {
+      marginTop: 4,
+      fontSize: 14,
+      color: '#666666',
     },
     signOutButton: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      padding: 16,
-      backgroundColor: 'rgba(255, 59, 48, 0.1)',
-    },
-    signOutText: {
-      color: '#FF3B30',
-      marginLeft: 12,
-      fontWeight: '600',
+      marginTop: 'auto',
+      backgroundColor: '#FF3B30',
     },
   });

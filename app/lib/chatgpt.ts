@@ -33,6 +33,8 @@ export async function getPokerAdvice(
       currentBet
     );
 
+    console.log("Prompt: ", prompt);
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -119,13 +121,18 @@ function generatePokerPrompt(
 - Community cards: ${formattedCommunityCards}
 - Game stage: ${gameStage}`;
 
-  // Add optional betting information if available
-  if (potSize !== undefined) {
-    prompt += `\n- Pot size: ${potSize}`;
-  }
-  if (currentBet !== undefined) {
-    prompt += `\n- Current bet: ${currentBet}`;
-  }
+  prompt += `\nFor reference, these are the hand rankings: 
+  - 1. Royal Flush (A, K, Q, J, 10, all the same suit.)
+  - 2. Straight Flush (Five cards in a sequence, all in the same suit.)
+  - 3. Four of a Kind (Four cards of the same rank.)
+  - 4. Full House (Three of a kind with a pair.)
+  - 5. Flush (Five cards of the same suit, not in sequence.)
+  - 6. Straight (Five cards in a sequence, not all in the same suit.)
+  - 7. Three of a Kind (Three cards of the same rank.)
+  - 8. Two Pair (Two cards of one rank, two cards of another rank.)
+  - 9. Pair (Two cards of the same rank.)
+  - 10. High Card (No other hand.)
+  `
 
   prompt += "\n\nWhat should I do? Respond with a JSON object containing advice, recommendation (fold/check/call/raise/all-in), confidence (0-100), and reasoning.";
 

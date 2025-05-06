@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ScrollView, Alert } from 'react-native';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { firestore } from '@/app/lib/firebase';
 import { useAuth } from '@/app/lib/authContext';
 import { ThemedView } from '@/components/ThemedView';
@@ -19,7 +19,11 @@ export default function HistoryScreen() {
 
       try {
         const gamesRef = collection(firestore, 'games');
-        const q = query(gamesRef, where('players', 'array-contains', user.uid));
+        const q = query(
+          gamesRef,
+          where('player_id', '==', user.email),
+          orderBy('createdAt', 'desc')
+        );
         const querySnapshot = await getDocs(q);
         
         const gamesData = querySnapshot.docs.map(doc => ({
@@ -77,8 +81,13 @@ export default function HistoryScreen() {
         games.map((game) => (
           <ThemedView key={game.id} style={historyStyle.gameCard}>
             <ThemedView style={historyStyle.gameHeader}>
-              <ThemedText type="subtitle">Game {game.id}</ThemedText>
-              <ThemedText style={historyStyle.result}>
+              <ThemedText type="subtitle">
+                Game {game.id.slice(0, 8)}
+              </ThemedText>
+              <ThemedText style={[
+                historyStyle.result,
+                { color: game.win ? '#4CAF50' : '#F44336' }
+              ]}>
                 {game.win ? 'Win' : 'Loss'}
               </ThemedText>
             </ThemedView>
@@ -89,14 +98,23 @@ export default function HistoryScreen() {
                 {game.playerHand?.value ? game.playerHand.value.join(', ') : 'N/A'}
               </ThemedText>
 
-              <ThemedText style={historyStyle.label}>Flop:</ThemedText>
-              <ThemedText>{game.flop ? game.flop.join(', ') : 'N/A'}</ThemedText>
+              <ThemedText style={historyStyle.label}>Community Cards:</ThemedText>
+              <ThemedText>
+                {game.flop ? `Flop: ${game.flop.join(', ')}` : 'N/A'}
+                {game.turn ? `\nTurn: ${game.turn}` : ''}
+                {game.river ? `\nRiver: ${game.river}` : ''}
+              </ThemedText>
 
-              <ThemedText style={historyStyle.label}>Turn:</ThemedText>
-              <ThemedText>{game.turn || 'N/A'}</ThemedText>
+              <ThemedText style={historyStyle.label}>Advice:</ThemedText>
+              <ThemedText>
+                {game.advice?.flop ? `Flop: ${game.advice.flop}` : 'N/A'}
+                {game.advice?.turn ? `\nTurn: ${game.advice.turn}` : ''}
+                {game.advice?.river ? `\nRiver: ${game.advice.river}` : ''}
+              </ThemedText>
 
-              <ThemedText style={historyStyle.label}>River:</ThemedText>
-              <ThemedText>{game.river || 'N/A'}</ThemedText>
+              <ThemedText style={historyStyle.date}>
+                {game.createdAt ? new Date(game.createdAt.toDate()).toLocaleString() : 'N/A'}
+              </ThemedText>
             </ThemedView>
           </ThemedView>
         ))

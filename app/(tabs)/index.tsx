@@ -27,14 +27,21 @@ export default function HomeScreen() {
       const gameId = Math.random().toString(36).substring(2, 8);
       
       const gameData = {
-        game_id: gameId,
-        player_id: user.email,
-        hand: ["", ""], // Placeholder for player's two cards
+        players: [user.uid],
+        playerHand: {
+          value: ["", ""],
+          suit: ["", ""]
+        },
         flop: ["", "", ""],
         turn: "",
         river: "",
         win: false,
-        timestamp: new Date()
+        createdAt: new Date(),
+        advice: {
+          flop: '',
+          turn: '',
+          river: ''
+        }
       };
       
       const gameRef = await addDoc(collection(firestore, 'games'), gameData);

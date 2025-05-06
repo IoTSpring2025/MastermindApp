@@ -24,19 +24,19 @@ export default function HomeScreen() {
     setIsCreating(true);
     try {
       const gameRef = await addDoc(collection(firestore, 'games'), {
-        players: [user.uid],
+        player_id: user.email,
         createdAt: new Date(),
         status: 'waiting',
-        playerHand: {
-          key: user.uid,
-          value: []
-        },
+        hand: [],
         gameId: user.uid + new Date().getTime(),
         advice: {
           flop: '',
           turn: '',
           river: ''
-        }
+        },
+        flop: [],
+        turn: '',
+        river: ''
       });
 
       router.push(`/game?id=${gameRef.id}`);

@@ -1,16 +1,19 @@
 export interface Game {
   id: string;
-  players: string[];
-  playerHand: {
+  player_id: string;
+  playerHand?: {
+    key: string;
     value: string[];
-    suit: string[];
   };
-  flop: string[];
-  turn: string;
-  river: string;
-  win: boolean;
-  createdAt: Date;
-  advice: {
+  flop?: string[];
+  turn?: string;
+  river?: string;
+  win?: boolean;
+  createdAt: {
+    seconds: number;
+    nanoseconds: number;
+  };
+  advice?: {
     flop: string;
     turn: string;
     river: string;

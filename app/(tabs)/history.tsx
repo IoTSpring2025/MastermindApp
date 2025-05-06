@@ -25,12 +25,10 @@ export default function HistoryScreen() {
           orderBy('createdAt', 'desc')
         );
         const querySnapshot = await getDocs(q);
-        
         const gamesData = querySnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as Game[];
-
         setGames(gamesData);
         setError(null);
       } catch (error) {
@@ -70,23 +68,25 @@ export default function HistoryScreen() {
       </ThemedView>
 
       {error ? (
-        <ThemedText style={{ textAlign: 'center', padding: 20 }}>
-          {error}
-        </ThemedText>
+        <ThemedView style={historyStyle.errorState}>
+          <ThemedText style={{ textAlign: 'center' }}>
+            {error}
+          </ThemedText>
+        </ThemedView>
       ) : games.length === 0 ? (
-        <ThemedText style={{ textAlign: 'center', padding: 20 }}>
-          No games played yet
-        </ThemedText>
+        <ThemedView style={historyStyle.emptyState}>
+          <ThemedText style={{ textAlign: 'center' }}>
+            No games played yet
+          </ThemedText>
+        </ThemedView>
       ) : (
         games.map((game) => (
           <ThemedView key={game.id} style={historyStyle.gameCard}>
             <ThemedView style={historyStyle.gameHeader}>
-              <ThemedText type="subtitle">
-                Game {game.id.slice(0, 8)}
-              </ThemedText>
+              <ThemedText type="subtitle">Game {game.id.slice(0, 8)}</ThemedText>
               <ThemedText style={[
                 historyStyle.result,
-                { color: game.win ? '#4CAF50' : '#F44336' }
+                game.win ? historyStyle.winResult : historyStyle.lossResult
               ]}>
                 {game.win ? 'Win' : 'Loss'}
               </ThemedText>
@@ -94,26 +94,19 @@ export default function HistoryScreen() {
 
             <ThemedView style={historyStyle.gameDetails}>
               <ThemedText style={historyStyle.label}>Your Hand:</ThemedText>
-              <ThemedText>
+              <ThemedText style={historyStyle.cardValue}>
                 {game.playerHand?.value ? game.playerHand.value.join(', ') : 'N/A'}
               </ThemedText>
 
               <ThemedText style={historyStyle.label}>Community Cards:</ThemedText>
-              <ThemedText>
+              <ThemedText style={historyStyle.cardValue}>
                 {game.flop ? `Flop: ${game.flop.join(', ')}` : 'N/A'}
                 {game.turn ? `\nTurn: ${game.turn}` : ''}
                 {game.river ? `\nRiver: ${game.river}` : ''}
               </ThemedText>
 
-              <ThemedText style={historyStyle.label}>Advice:</ThemedText>
-              <ThemedText>
-                {game.advice?.flop ? `Flop: ${game.advice.flop}` : 'N/A'}
-                {game.advice?.turn ? `\nTurn: ${game.advice.turn}` : ''}
-                {game.advice?.river ? `\nRiver: ${game.advice.river}` : ''}
-              </ThemedText>
-
               <ThemedText style={historyStyle.date}>
-                {game.createdAt ? new Date(game.createdAt.toDate()).toLocaleString() : 'N/A'}
+                {game.createdAt ? new Date(game.createdAt.seconds * 1000).toLocaleString() : 'N/A'}
               </ThemedText>
             </ThemedView>
           </ThemedView>

@@ -14,6 +14,7 @@ export default function GameScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const [gameData, setGameData] = useState<any>(null);
+  const [playerKey, setPlayerKey] = useState<string | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [advice, setAdvice] = useState<PokerAdviceResponse | null>(null);
   const [isLoadingAdvice, setIsLoadingAdvice] = useState(false);
@@ -32,18 +33,19 @@ export default function GameScreen() {
         const data = games[firstKey];
         console.log('Forcing load of first game:', firstKey, data);
         // Determine player key: use user.uid if present, otherwise fallback to first player
-        let playerKey: string | undefined = user?.uid;
-        if (!playerKey || !data.players?.[playerKey]) {
-          playerKey = data.players ? Object.keys(data.players)[0] : undefined;
+        let resolvedPlayerKey: string | undefined = user?.uid;
+        if (!resolvedPlayerKey || !data.players?.[resolvedPlayerKey]) {
+          resolvedPlayerKey = data.players ? Object.keys(data.players)[0] : undefined;
         }
         setGameData({
           flop: data.flop || [],
           turn: data.turn || null,
           river: data.river || null,
-          playerHands: (data.players && playerKey) ? { [playerKey]: data.players[playerKey]?.hand || [] } : {},
+          playerHands: (data.players && resolvedPlayerKey) ? { [resolvedPlayerKey]: data.players[resolvedPlayerKey]?.hand || [] } : {},
           call: data.call || null,
           completed: data.completed || false,
         });
+        setPlayerKey(resolvedPlayerKey);
         if (data.completed) {
           setGameData(null); // Clear game data to show create game message
         }
@@ -65,14 +67,14 @@ export default function GameScreen() {
     if (!gameData) return null;
     
     const { flop, turn, river, playerHands } = gameData;
-    const playerCards = playerHands?.[user?.uid || ''] || [];
+    const playerCards = playerHands?.[playerKey || ''] || [];
     
     if (playerCards.length > 0 && !flop) return 'pre-flop';
     if (flop && !turn) return 'flop';
     if (turn && !river) return 'turn';
     if (river) return 'river';
     return null;
-  }, [gameData, user]);
+  }, [gameData, playerKey]);
 
   // Get ChatGPT advice when the game stage changes
   useEffect(() => {
@@ -87,7 +89,7 @@ export default function GameScreen() {
     if (!gameData || !user) return;
 
     const { flop, turn, river, playerHands } = gameData;
-    const playerCards = playerHands?.[user.uid] || [];
+    const playerCards = playerHands?.[playerKey || ''] || [];
     
     // Don't fetch advice if we don't have player cards
     if (!playerCards.length) return;
@@ -308,7 +310,7 @@ export default function GameScreen() {
   }
 
   const { flop, turn, river, playerHands, call } = gameData;
-  const playerCards = playerHands?.[user.uid] || [];
+  const playerCards = playerKey ? playerHands?.[playerKey] || [] : [];
   const currentStage = determineGameStage();
 
   // Build community cards array in correct order

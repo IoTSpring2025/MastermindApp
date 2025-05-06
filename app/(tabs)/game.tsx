@@ -232,6 +232,7 @@ export default function GameScreen() {
       await set(ref(database, 'hands'), "");
       await set(ref(database, 'game_over'), true);
       setAdvice(null); // Clear old AI advice after game ends
+      resetGame(); // Reset game state
 
       Alert.alert('Success', 'Game marked as won!');
       router.push('/(tabs)/history');
@@ -287,6 +288,8 @@ export default function GameScreen() {
       await set(ref(database, 'game_over'), true);
       setAdvice(null); // Clear old AI advice after game ends
 
+      resetGame(); // Reset game state
+
       Alert.alert('Success', 'Game marked as lost');
       router.push('/(tabs)/history');
     } catch (error) {
@@ -300,10 +303,10 @@ export default function GameScreen() {
   const resetGame = async () => {
     try {
       // Reset all fields in the flat structure
-      await set(ref(database, 'hand'), "");
-      await set(ref(database, 'flop'), "");
-      await set(ref(database, 'turn'), "");
-      await set(ref(database, 'river'), "");
+      await set(ref(database, 'hand'), null);
+      await set(ref(database, 'flop'), null);
+      await set(ref(database, 'turn'), null);
+      await set(ref(database, 'river'), null);
       setGameData({
         flop: null,
         turn: null,
